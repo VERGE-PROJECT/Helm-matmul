@@ -1,0 +1,42 @@
+# Default values for compss-matmul.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: oriolmac/compss-prom
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: 3.3-arm
+
+compss:
+  # namespace: {}
+  master:
+    labels:
+      node: master
+    ports:
+      name: ssh
+    # local volume in node where the master is executed
+    volume: {}
+    #  localPath: /tmp/compss-matmul-results   # it has to exist locally
+    #  node: agx12
+
+  worker:
+    number: 2
+    labels:
+      node: worker
+    resources:
+      cpu: 4
+      memory: 4  # in gigabytes
+    ports:
+      name: ssh
+
+  service:
+    ssh: 22
+
+matmulparams:
+  b: 3
+  e: 1024
+  iterations: 1   # number of times the application will do the matrix multiplication
+  context: 
+    folderPath: /home/omartinez/compss-matmul/matmul
+    file: matmul.py

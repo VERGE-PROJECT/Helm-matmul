@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-worker
+  labels:
+    {{- include "compss-matmul.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      pod-hostname: worker
+  serviceName: {{ .Release.Name }}
+  replicas: {{ $.Values.compss.worker.number }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        pod-hostname: worker
+    spec:
+      terminationGracePeriodSeconds: 5
+      subdomain: {{ .Release.Name }}
+      dnsConfig:
+        searches:
+        - {{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local
+      containers:
+      - name: worker
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: [ "/usr/sbin/sshd", "-D" ]
+        resources:
+          limits:
+            memory: {{ $.Values.compss.worker.resources.memory }}G
+            cpu: {{ $.Values.compss.worker.resources.cpu }}
+        ports:
+        - containerPort: 22
+          name: {{ $.Values.compss.worker.ports.name }}
+        volumeMounts:
+          - name: shared-data
+            mountPath: /shared-data 
+      - name: prometheus-client
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: [ "python3", "{{ .Values.matmulparams.context.folderPath }}/metrics_client.py" ]
+        ports:
+        - containerPort: 15000
+          name: prometheus
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared-data
+      - name: redis-server
+        image: "redis:latest"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["redis-server"]
+        ports:
+        - containerPort: 6379
+          name: redis
+      volumes:
+        - name: shared-data
+          emptyDir: {}

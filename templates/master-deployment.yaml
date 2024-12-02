@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-master
+  labels:
+    {{- include "compss-matmul.labels" . | nindent 4 }}
+    {{- toYaml .Values.compss.master.labels | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      pod-hostname: master
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        pod-hostname: master
+    spec:
+      serviceAccountName: cleanup
+      terminationGracePeriodSeconds: 5
+      hostname: master
+      subdomain: {{ .Release.Name }}
+      dnsConfig:
+        searches:
+        - {{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local
+      initContainers:
+      - name: wait-for-workers
+        image: busybox
+        command:
+          - sh
+          - -c
+          - |
+            for i in $(seq 1 {{ $.Values.compss.worker.number }}); do
+              worker_index=$((i - 1))
+              until nslookup {{ .Release.Name }}-worker-${worker_index}.{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local; do
+                echo "Waiting for {{ .Release.Name }}-worker-${worker_index}";
+                sleep 2;
+              done;
+            done
+      containers:
+      - name: master
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env: 
+        - name: DEPLOYMENT_NAME
+          value: {{ .Release.Name }}
+        command: [ "/opt/COMPSs/Runtime/scripts/system/kubernetes/master.sh" ]
+        args: 
+          - "{{ .Release.Namespace }}"
+          - "{{ .Values.compss.worker.number }}"
+          - "{{ .Values.compss.worker.resources.cpu }}"
+          - "{{ .Values.compss.worker.resources.memory }}"
+          - "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          - "{{ .Values.matmulparams.context.folderPath }}"  # app_dir
+          - "0"   # min_vms
+          - "0"   # max_vms
+          - "0"   # creation_time
+          - "-t -g {{ .Values.matmulparams.context.folderPath }}/{{ .Values.matmulparams.context.file }} -b {{ .Values.matmulparams.b }} -e {{ .Values.matmulparams.e }} -n {{ .Values.matmulparams.iterations }}"
+
+        ports:
+        - name: {{ .Values.compss.master.ports.name }}
+          containerPort: 22
+          protocol: TCP
+      {{- if and .Values.compss.master.volume }}
+        volumeMounts:
+          - name: master-results-pvc
+            mountPath: /root/.COMPSs/ # mount path within the container 
+      volumes:
+      - name: master-results-pvc
+        persistentVolumeClaim:
+          claimName: master-results-pvc
+      {{- end }}
