@@ -3,10 +3,10 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: oriolmac/compss-prom
+  repository: oriolmac/compss-matmul-prom
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 3.3-arm
+  tag: 3.3
 
 compss:
   # namespace: {}
@@ -34,9 +34,12 @@ compss:
     ssh: 22
 
 matmulparams:
-  b: 3
-  e: 1024
-  iterations: 1   # number of times the application will do the matrix multiplication
+  b: 6
+  e: 246
+  iterations: 25   # number of times the application will do the matrix multiplication
   context: 
     folderPath: /home/omartinez/compss-matmul/matmul
     file: matmul.py
+
+prometheusclient:
+  buckets: "-inf, 0.0001, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.1, 1, 10, 50, 100, 200, inf" # Histogram bucket

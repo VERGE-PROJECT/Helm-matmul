@@ -56,9 +56,13 @@ The matmul application takes four parameters:
 1. `b`. Number of blocks each matrix will have. **The larger this parameter is, the greater the number of independent tasks available for computation, thereby increasing parallelism.**
 2. `e`. Number of elements each block will have. **The larger the value of `e`, the more time it will take for a task to complete its computation before proceeding to the next task that is free of dependencies.**
 3. `iterations`. Number of times the same COMPSs execution will perform the matrix multiplication. 
-4. `pushgateway_endpoint`. Endpoint for the application to push the results to Prometheus' Pushgateway in the form of `url:port`. 
 
 Executing `matmul.py -b 4 -e 1024` runs 4 x 4 blocks of 1024 x 1024 elements each block, which will conform matrices of 4096 x 4096 elements.
+
+### Prometheus client parameters
+1. `buckets`. Specifies the bucket values for the histogram of COMPSs execution times. The values should be provided as a comma-separated list in a format suitable for conversion to a Python list.
+
+As an example `metrics_client.py --buckets -inf,0.001,0.005,0.01,0.1,1,10,inf` runs the prometheus client (exporter) with a bucket of [-inf,0.001,0.005,0.01,0.1,1,10,inf] on the container of prometheus-client in the master pod.
 
 ## Prometheus
 Prometheus can be installed using Helm: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus
