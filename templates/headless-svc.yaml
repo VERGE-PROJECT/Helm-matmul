@@ -6,7 +6,6 @@ metadata:
   labels:
     {{- include "compss-matmul.labels" . | nindent 4 }}
 spec:
-  clusterIP: None
   ports:
   - name: ssh
     protocol: TCP
